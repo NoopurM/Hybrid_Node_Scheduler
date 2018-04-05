@@ -3,14 +3,12 @@
 #include <queue>
 #include <functional>
 #include <map>
+#include <chrono>
+#include <cilk/cilk_api.h>
 using namespace std;
 
-/*int matrix_sz=32;
-vector<vector<int> > x(matrix_sz, vector<int>(matrix_sz, 3));
-vector<vector<int> > y(matrix_sz, vector<int>(matrix_sz, 3));
-vector<vector<int> > z(matrix_sz, vector<int>(matrix_sz));*/
-#define N 32
-int m=2;
+#define N 2048
+int m=32;
 
 int x[N][N];
 int y[N][N];
@@ -61,9 +59,9 @@ void serial_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N], int
 
 void parallel_rec_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N], int r_y, int c_y, int n, int *parent_sync_cnt, int *child_sync_cnt, int *rp) {
     pthread_t tid = pthread_self();
-    cout<<"parallel_rec_mm: n="<<n<<endl;
-    if (n == 1) {
-        z[r_z][c_z] = z[r_z][c_z] + x[r_x][c_x]*y[r_y][c_y];
+    if (n == m) {
+        //z[r_z][c_z] = z[r_z][c_z] + x[r_x][c_x]*y[r_y][c_y];
+        serial_mm(r_z, c_z, x, r_x, c_x, y, r_y, c_y, m);
 	    pthread_mutex_lock(&sync_cnt_lock);
         (*parent_sync_cnt)--;
 	    pthread_mutex_unlock(&sync_cnt_lock);
@@ -143,31 +141,33 @@ void parallel_rec_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N
         } else {
             (*parent_sync_cnt)--;
 	        pthread_mutex_unlock(&sync_cnt_lock);
+            if (n == N) {
+                completed = true;
+            }
         }
     }
 }
 
 
 pthread_t get_random(pthread_t selfid) {
-    pthread_t res = selfid;
+    static unsigned long x=123456789, y=362436069, z=521288629;
+
+    unsigned long t;
+    x ^= x << 16;
+    x ^= x >> 5;
+    x ^= x << 1;
+
+    t = x;
+    x = y;
+    y = z;
+    z = t ^ x ^ y;
     auto itr = que_map.begin();
-    while(res == selfid) {
-        res = next(itr, rand()%que_map.size())->first;
-    }
-    //cout<<"Stealing from :"<<res<<endl;
-    return res;
+    return next(itr, z%que_map.size())->first;
 }
-bool check_ques_empty() {
-    for(auto itr=que_map.begin();itr!=que_map.end();itr++) {
-        if (itr->second.size() > 0) {
-            return false;
-        }
-    }
-    return true;
-}
+
 void* do_work(void *data) {
     pthread_t tid, tid_stolen;
-    while(1) {
+    while(!completed) {
         tid = pthread_self();
         pthread_mutex_lock(&(lock_map[tid]));
         if (completed && que_map[tid].size() == 0) {
@@ -183,11 +183,10 @@ void* do_work(void *data) {
             pthread_mutex_unlock(&lock_map[tid]);
         }
         
-        //cout<<tid<<" : "<<que_map[tid].size()<<endl;
         //Steal from other queue
         tid_stolen = get_random(tid); 
         pthread_mutex_lock(&lock_map[tid_stolen]); 
-        if (completed && que_map[tid].size() == 0) {
+        if (completed && que_map[tid_stolen].size() == 0) {
             pthread_mutex_unlock(&lock_map[tid_stolen]);
             break;
         }
@@ -200,14 +199,18 @@ void* do_work(void *data) {
             pthread_mutex_unlock(&lock_map[tid_stolen]);
         }
     }
+    cout<<tid<<" exited"<<endl;
     pthread_exit(NULL);
 }
 
 void dr_steal() {
-    vector<pthread_t>tids(4);
+    //int numWorkers = __cilkrts_get_nworkers();
+    int numWorkers = 4;
+    cout<<"Available workers :"<<numWorkers<<endl;
+    vector<pthread_t>tids(numWorkers);
     void *status;
     
-    for(int i=0;i<4;i++) {
+    for(int i=0;i<numWorkers;i++) {
         if(pthread_create(&tids[i], NULL, do_work, (void *)(i+1))) {
             cout<<"Failed to create thread for id :"<<i<<endl;
         } else {
@@ -215,37 +218,36 @@ void dr_steal() {
         }
     }
     
-    int *parent_sync_cnt = new int(4);
+    int *parent_sync_cnt = new int(1);
     int *rp = new int(0);
     int *child_sync_cnt = new int(4);
  
     submit_task(tids[0], parallel_rec_mm, 0, 0, x, 0, 0, y, 0, 0, N, parent_sync_cnt, child_sync_cnt, rp);
 
-    while(*rp != 2);
-    completed = true;
-    for(int i=0;i<4;i++) {
+    chrono::time_point<std::chrono::system_clock> start, end;
+    start = chrono::system_clock::now();
+
+    //while(*parent_sync_cnt > 0);
+    //completed = true;
+    for(int i=0;i<numWorkers;i++) {
         if(pthread_join(tids[i], &status)) {
             cout<<"Failed to join thread for id :"<<i<<endl;
         }
         cout<<" "<<que_map[tids[i]].size();
     }
-
+    end = chrono::system_clock::now();
+    chrono::duration<double> elapsed_seconds = end - start;
+    print_matrix(z);
+    cout<<"Job time = "<<elapsed_seconds.count()<<"seconds"<<endl;
 }
 int main(int argc, char *argv[]) {
-    //int n=4;
-    //vector<vector<int> > x(n, vector<int>(n, 3));
-    //vector<vector<int> > y(n, vector<int>(n, 3));
-    //vector<vector<int> > z(n, vector<int>(n));
-
     populate_matrix(x);
     populate_matrix(y);
     populate_matrix(x);
     print_matrix(x);
     print_matrix(y);
-    print_matrix(z);
 
     dr_steal();
-    print_matrix(z);
 	return 0;
 }
 
