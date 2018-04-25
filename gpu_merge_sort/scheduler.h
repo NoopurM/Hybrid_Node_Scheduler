@@ -16,5 +16,6 @@ void submit_task(PTHREADID tid, CALLABLE fn, ARGS&&... args ) {
 template <typename F, typename ...Args>
 void launch_kernel(F fun, Args ...args) {
     fun<<<1,1>>>(args...);
+    cudaDeviceSynchronize();
   //cuda_check_last(typeid(F).name());
 }

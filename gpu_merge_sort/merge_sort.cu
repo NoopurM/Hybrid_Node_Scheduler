@@ -13,14 +13,12 @@ extern vector<pthread_t> workers;
 
 bool completed=false;
 #define N 15
-//int arr[15];
-int *arr;
+int arr[N];
+int *d_arr;
 
-//void merge(int *arr, int p, int q, int r) {
-void merge(int *arr, int *p, int *q, int *r) {
+__global__ void __gpu_merge__(int *arr, int *p, int *q, int *r) {
 	int left_n = *q-*p+1;
     int right_n = *r-*q;
-    //int left[left_n], right[right_n];
 	int *left = new int[left_n];
     int *right = new int[right_n];
     int i,j,k;
@@ -54,46 +52,76 @@ void merge(int *arr, int *p, int *q, int *r) {
     delete[] left;
     delete[] right;
 }
-//void parallel_merge_sort(int *arr, int p, int r, int *parent_sync_cnt, int *child_sync_cnt, int *rp) {
-void parallel_merge_sort(int *p, int *r, int *parent_sync_cnt, int *child_sync_cnt, int *rp) {
+
+void cpu_merge(int p, int q, int r) {
+    int left[q-p+1], right[r-q];
+    int i,j,k;
+	for(i=0;i<q-p+1;i++) {
+		left[i] = arr[i+p];
+	}
+	for(i=0;i<r-q;i++) {
+		right[i] = arr[i+q+1];
+	}
+	for(k=p,i=0,j=0;i<(q-p+1) && j<(r-q);) {
+		if (left[i] <= right[j]) {
+			arr[k] = left[i];
+			i++;
+			k++;
+		} else {
+			arr[k] = right[j];
+			j++;
+			k++;
+		}
+	}
+	while(i<(q-p+1)) {
+		arr[k] = left[i];
+		k++;
+		i++;
+	}
+	while(j<(r-q)) {
+		arr[k] = right[j];
+		k++;
+		j++;
+	}
+}
+
+void gpu_merge(int p, int q, int r) {
+    int *d_p, *d_r, *d_q;
+    cout<<"Executing merge on GPU"<<endl;
+    cudaMalloc((void **)&d_p, sizeof(int));
+    cudaMalloc((void **)&d_q, sizeof(int));
+    cudaMalloc((void **)&d_r, sizeof(int));
+    cudaMemcpy( d_p, &p, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy( d_q, &q, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy( d_r, &r, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy( d_arr, arr, N * sizeof(int), cudaMemcpyHostToDevice);
+    launch_kernel(__gpu_merge__, d_arr, d_p, d_q, d_r);
+    cudaMemcpy(arr, d_arr, N * sizeof(int),cudaMemcpyDeviceToHost);
+    cudaFree(d_p); cudaFree(d_q);cudaFree(d_r); cudaFree(d_arr); 
+}
+
+void parallel_merge_sort(int p, int r, int *parent_sync_cnt, int *child_sync_cnt, int *rp) {
 	pthread_t tid = pthread_self();
-    cout<<"parallel merge sort called :"<<*p<<" "<<*r<<endl;
-    if (*p < *r) {
-        int *q;
-        cudaMallocManaged((void **)&q, sizeof(int));
-		*q = floor((*p+*r)/2);
+    cout<<"parallel merge sort called :"<<p<<" "<<r<<endl;
+    if (p < r) {
+        int q;
+		q = floor((p+r)/2);
         
-		//int q = floor((p+r)/2);
 		pthread_mutex_lock(&sync_cnt_lock);
         if (*rp == 0) {
             pthread_mutex_unlock(&sync_cnt_lock);
-            int *new_child_sync_cnt1, *child_rp1;
-	        cudaMallocManaged((void **)&new_child_sync_cnt1, sizeof(int));
-	        cudaMallocManaged((void **)&child_rp1, sizeof(int));
-	        
-            *new_child_sync_cnt1 = 2;
-	        *child_rp1 = 0;
-            //submit_task(tid, parallel_merge_sort, p, q, child_sync_cnt, new_child_sync_cnt1, child_rp1);
+	        int *new_child_sync_cnt1 = new int(2);
+            int *child_rp1 = new int(0);
             submit_task(tid, parallel_merge_sort, p, q, child_sync_cnt, new_child_sync_cnt1, child_rp1);
-            //launch_kernel(parallel_merge_sort, p, q, child_sync_cnt, new_child_sync_cnt1, child_rp1);
- 
-	        int *new_child_sync_cnt2, *child_rp2;
-            cudaMallocManaged((void **)&new_child_sync_cnt2, sizeof(int));
-            cudaMallocManaged((void **)&child_rp2, sizeof(int));
-            *new_child_sync_cnt2 = 2;
-            *child_rp2 = 0; 
-            //submit_task(tid, parallel_merge_sort, q+1, r, child_sync_cnt, new_child_sync_cnt2, child_rp2);
-            int *q1;
-            cudaMallocManaged((void **)&q1, sizeof(int));
-            *q1 = *q+1;
-            submit_task(tid, parallel_merge_sort, q1, r, child_sync_cnt, new_child_sync_cnt2, child_rp2);
-            //launch_kernel(parallel_merge_sort, q+1, r, child_sync_cnt, new_child_sync_cnt2, child_rp2);
+	        
+            int *new_child_sync_cnt2 = new int(2);
+            int *child_rp2 = new int(0);
+            submit_task(tid, parallel_merge_sort, q+1, r, child_sync_cnt, new_child_sync_cnt2, child_rp2);
             
             pthread_mutex_lock(&sync_cnt_lock);
             if (*(child_sync_cnt) > 0) {
                 *rp = 1;
                 submit_task(tid, parallel_merge_sort, p, r, parent_sync_cnt, child_sync_cnt, rp);
-                //launch_kernel(parallel_merge_sort, p, r, parent_sync_cnt, child_sync_cnt, rp);
 	            pthread_mutex_unlock(&sync_cnt_lock);
                 return;
             }
@@ -107,7 +135,6 @@ void parallel_merge_sort(int *p, int *r, int *parent_sync_cnt, int *child_sync_c
             if (*(child_sync_cnt) > 0) {
                 *rp = 1;
                 submit_task(tid, parallel_merge_sort, p, r, parent_sync_cnt, child_sync_cnt, rp);
-                //launch_kernel(parallel_merge_sort, p, r, parent_sync_cnt, child_sync_cnt, rp);
 	            pthread_mutex_unlock(&sync_cnt_lock);
                 return;
             }
@@ -116,12 +143,13 @@ void parallel_merge_sort(int *p, int *r, int *parent_sync_cnt, int *child_sync_c
 	        pthread_mutex_unlock(&sync_cnt_lock);
         }
 
-		launch_kernel(merge, arr, p, q, r);
+        gpu_merge(p, q, r);
+        //cpu_merge(p, q, r);
         pthread_mutex_lock(&sync_cnt_lock);
 		(*parent_sync_cnt)--;
-	    cout<<"second half completed :"<<*r-*p<<endl;
+	    cout<<"second half completed :"<<r-p<<endl;
         pthread_mutex_unlock(&sync_cnt_lock);
-        if ((*r-*p) == 14) {
+        if ((r-p) == N-1) {
             completed = true;
         }
 	} else {
@@ -132,34 +160,22 @@ void parallel_merge_sort(int *p, int *r, int *parent_sync_cnt, int *child_sync_c
 }
 int main() {
 	create_threadpool(4);
-    cudaMallocManaged((void **)&arr, 25*sizeof(int));
-    //cudaMalloc((void **)&d_arr, N*sizeof(int));
-    for(int i=14;i>=0;i--) {
-        //cudaMallocManaged(&arr[i], sizeof(int));
+    for(int i=N-1;i>=0;i--) {
 	    arr[i] = i+1;
     }
 
-    for(int i=0;i<15;i++) {
+    for(int i=0;i<N;i++) {
         cout<<"arr :"<<arr[i]<<endl;
     }
-	int *parent_sync_cnt, *child_sync_cnt, *rp;
-	cudaMallocManaged((void **)&parent_sync_cnt, sizeof(int));
-	cudaMallocManaged((void **)&rp, sizeof(int));
-	cudaMallocManaged((void **)&child_sync_cnt, sizeof(int));
-	*parent_sync_cnt = 2;	
-	*rp = 0;		
-	*child_sync_cnt = 2;
+	int *parent_sync_cnt = new int(2);
+    int *rp = new int(0);
+    int *child_sync_cnt = new int(2);
  
-    int *p, *r;
-    cudaMallocManaged((void **)&p, sizeof(int));
-    cudaMallocManaged((void **)&r, sizeof(int));
-    *p = 0;
-    *r = 14;
-    submit_task(workers[0], parallel_merge_sort, p, r, parent_sync_cnt, child_sync_cnt, rp);
+    submit_task(workers[0], parallel_merge_sort, 0, N-1, parent_sync_cnt, child_sync_cnt, rp);
     
     wait_until_done();
     
-    for (int i=0;i<15;i++) {
+    for (int i=0;i<N;i++) {
 		cout<<arr[i]<<" ";
 	}
 }
