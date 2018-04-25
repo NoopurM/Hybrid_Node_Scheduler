@@ -5,45 +5,19 @@
 #include <map>
 #include <queue>
 #include <functional>
+#include "scheduler.h"
 using namespace std;
 
-extern map<pthread_t, deque<function<void()>>> que_map;
 pthread_mutex_t sync_cnt_lock;
 extern vector<pthread_t> workers;
 
 bool completed=false;
-//int arr[10] = {23,12,11,33,2,1,4,22,12,10};
-//int arr[15] = {15,14,13,12,11,10,9,8,7,6,5,4,3,2,1};
+#define N 15
+//int arr[15];
 int *arr;
-/*cudaMallocManaged(&arr, 15*sizeof(int));
-for(int i=14;i>=0;i++) {
-    //cudaMallocManaged(&arr[i], sizeof(int));
-	arr[i] = i+1;
-}*/
-
-template < typename CALLABLE, typename ...ARGS >
-__global__ void launch_task(ARGS ...args) {
-    //printf("IN KERNEL : Launching task");
-    CALLABLE()(args...);
-    //printf("IN KERNEL : Launched task");
-}
-
-template < typename CALLABLE, typename ...ARGS >
-void launch_kernel(CALLABLE fn, ARGS ...args) {
-    cout<<"About to launch task"<<endl;
-    launch_task<CALLABLE, ARGS...><<<1,1>>>(args...);
-    cout<<"launched kernel"<<endl;
-    cudaDeviceSynchronize();
-}
-
-template < typename PTHREADID, typename CALLABLE, typename... ARGS >
-void submit_task(PTHREADID tid, CALLABLE fn, ARGS&&... args ) { 
-    cout<<"Submitting task to "<<tid<<" queue"<<endl; 
-    que_map[tid].push_back( bind( fn, args... ) ) ; 
-}
 
 //void merge(int *arr, int p, int q, int r) {
-__global__ void merge(int *arr, int *p, int *q, int *r) {
+void merge(int *arr, int *p, int *q, int *r) {
 	int left_n = *q-*p+1;
     int right_n = *r-*q;
     //int left[left_n], right[right_n];
@@ -142,11 +116,7 @@ void parallel_merge_sort(int *p, int *r, int *parent_sync_cnt, int *child_sync_c
 	        pthread_mutex_unlock(&sync_cnt_lock);
         }
 
-		//merge(arr, p, q, r);
-		//launch_kernel(merge, arr, p, q, r);
-		//launch_kernel(merge, p, *q, r);
-        merge<<<1,1>>>(arr, p, q, r);
-        cudaDeviceSynchronize();
+		launch_kernel(merge, arr, p, q, r);
         pthread_mutex_lock(&sync_cnt_lock);
 		(*parent_sync_cnt)--;
 	    cout<<"second half completed :"<<*r-*p<<endl;
@@ -163,10 +133,12 @@ void parallel_merge_sort(int *p, int *r, int *parent_sync_cnt, int *child_sync_c
 int main() {
 	create_threadpool(4);
     cudaMallocManaged((void **)&arr, 25*sizeof(int));
+    //cudaMalloc((void **)&d_arr, N*sizeof(int));
     for(int i=14;i>=0;i--) {
         //cudaMallocManaged(&arr[i], sizeof(int));
 	    arr[i] = i+1;
     }
+
     for(int i=0;i<15;i++) {
         cout<<"arr :"<<arr[i]<<endl;
     }
