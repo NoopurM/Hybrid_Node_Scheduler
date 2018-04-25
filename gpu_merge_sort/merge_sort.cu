@@ -108,7 +108,7 @@ void parallel_merge_sort(int p, int r, int *parent_sync_cnt, int *child_sync_cnt
 	    cudaMemcpy( d_arr, arr, N * sizeof(int), cudaMemcpyHostToDevice);
 	    launch_kernel(merge, d_arr, d_p, d_q, d_r);
 	    //merge<<<1,1>>>(d_arr, d_p, d_q, d_r);
-        cudaMemcpy( arr, d_arr, N * sizeof(int),cudaMemcpyDeviceToHost);
+        cudaMemcpy(arr, d_arr, N * sizeof(int),cudaMemcpyDeviceToHost);
         cudaFree(d_p); cudaFree(d_q);cudaFree(d_r); cudaFree(d_arr); 
         pthread_mutex_lock(&sync_cnt_lock);
 		(*parent_sync_cnt)--;
