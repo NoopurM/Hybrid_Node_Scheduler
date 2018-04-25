@@ -7,21 +7,15 @@
 #include <map>
 #include <queue>
 #include <functional>
+#include "scheduler.h"
 using namespace std;
 
-extern map<pthread_t, deque<function<void()>>> que_map;
 pthread_mutex_t sync_cnt_lock;
 extern vector<pthread_t> workers;
 
 bool completed=false;
 //int arr[10] = {23,12,11,33,2,1,4,22,12,10};
 int arr[15] = {15,14,13,12,11,10,9,8,7,6,5,4,3,2,1};
-
-template < typename PTHREADID, typename CALLABLE, typename... ARGS >
-void submit_task(PTHREADID tid, CALLABLE fn, ARGS&&... args ) { 
-    //cout<<"Submitting task to "<<tid<<" queue"<<endl; 
-    que_map[tid].push_back( bind( fn, args... ) ) ; 
-}
 
 //void merge(int *arr, int p, int q, int r) {
 void merge(int p, int q, int r) {
