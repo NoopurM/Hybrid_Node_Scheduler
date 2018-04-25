@@ -54,7 +54,6 @@ CUDA_KERNEL void serial_mm(int *r_z, int *c_z, int *x, int *r_x, int *c_x, int *
         for(int k=*c_x; k<(*c_x+*m); k++) {
             for(int j=*c_y,v=*c_z ; j<(*c_y+*m); j++,v++) {
 		dev_z[u * N + v] = dev_z[u * N + v] + x[i * N + k] * y[k * N + j]; 
-		printf("z[%d][%d] = %d\n", u,v,dev_z[u * N + v]);
             }
         }
     }
@@ -82,13 +81,12 @@ void gpu_serial_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N],
 	int *h_x, *h_y, *h_z;
 
 	cudaMallocHost((void **) &h_x, N*N*sizeof(int));
-        cudaMallocHost((void **) &h_y, N*N*sizeof(int));
-        cudaMallocHost((void **) &h_z, N*N*sizeof(int));
+	cudaMallocHost((void **) &h_y, N*N*sizeof(int));
+	cudaMallocHost((void **) &h_z, N*N*sizeof(int));
 	input(x, h_x);
 	input(y, h_y);
 	input(z, h_z);
 
-	cout<<"started gpu_serial_mm\n";
 	cudaMalloc( (void**)&dev_r_z, sizeof(int) );
 	cudaMalloc( (void**)&dev_c_z, sizeof(int) );
 	cudaMalloc( (void**)&dev_r_x, sizeof(int) );
@@ -111,9 +109,7 @@ void gpu_serial_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N],
 	cudaMemcpy( dev_y, h_y, N*N*sizeof(int),cudaMemcpyHostToDevice);
 	cudaMemcpy( dev_z, h_z, N*N*sizeof(int),cudaMemcpyHostToDevice);	
 
-	cout<<"launch kernel\n";
 	launch_kernel(serial_mm, dev_r_z, dev_c_z, dev_x, dev_r_x, dev_c_x, dev_y, dev_r_y, dev_c_y, dev_z, dev_m);	
-	cout<<"finished launching\n";
 
 	cudaMemcpy( h_z, dev_z,N*N*sizeof(int),cudaMemcpyDeviceToHost);
 	output(h_z);
