@@ -19,3 +19,17 @@ void launch_kernel(F fun, Args ...args) {
     cudaDeviceSynchronize();
   //cuda_check_last(typeid(F).name());
 }
+
+template <typename FLAG, typename CALLABLE1, typename CALLABLE2, typename... ARGS>
+void run_task(FLAG run_flag, CALLABLE1 fn1, CALLABLE2 fn2, ARGS&& ...args) {
+    if (run_flag == 0) {
+        cout<<"Flag provided 0 hence executing func on cpu"<<endl;
+        fn1(args...);
+    } else if (run_flag == 1) {
+        cout<<"Flag provided 1 hence launching kernel"<<endl;
+        fn2(args...);
+    } else {
+        //decide where to execute
+        fn1(args...);
+    }
+}
