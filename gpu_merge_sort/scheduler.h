@@ -5,11 +5,14 @@
 #define CUDA_KERNEL __global__
 using namespace std;
 
-extern map<pthread_t, deque<function<void()>>> que_map;
+extern map<pthread_t, deque<function<void()>>> cpu_que_map;
+extern map<pthread_t, deque<function<void()>>> gpu_que_map;
+extern vector<pthread_t> gpu_workers;
+
 template < typename PTHREADID, typename CALLABLE, typename... ARGS >
 void submit_task(PTHREADID tid, CALLABLE fn, ARGS&&... args ) { 
     //cout<<"Submitting task to "<<tid<<" queue"<<endl; 
-    que_map[tid].push_back( bind( fn, args... ) ) ; 
+    cpu_que_map[tid].push_back( bind( fn, args... ) ) ; 
 }
 
 
@@ -27,7 +30,8 @@ void run_task(FLAG run_flag, CALLABLE1 fn1, CALLABLE2 fn2, ARGS&& ...args) {
         fn1(args...);
     } else if (run_flag == 1) {
         cout<<"Flag provided 1 hence launching kernel"<<endl;
-        fn2(args...);
+        //fn2(args...);
+        gpu_que_map[gpu_workers[0]].push_back(bind(fn2, args...));
     } else {
         //decide where to execute
         fn1(args...);

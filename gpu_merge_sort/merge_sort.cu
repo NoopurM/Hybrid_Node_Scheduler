@@ -9,7 +9,8 @@
 using namespace std;
 
 pthread_mutex_t sync_cnt_lock;
-extern vector<pthread_t> workers;
+extern vector<pthread_t> cpu_workers;
+extern vector<pthread_t> gpu_workers;
 
 bool completed=false;
 #define N 15
@@ -53,7 +54,7 @@ __global__ void __gpu_merge__(int *d_arr, int *p, int *q, int *r) {
     delete[] right;
 }
 
-void cpu_merge(int p, int q, int r) {
+void cpu_merge(int p, int q, int r, int *rp) {
     int left[q-p+1], right[r-q];
     int i,j,k;
 	for(i=0;i<q-p+1;i++) {
@@ -83,9 +84,10 @@ void cpu_merge(int p, int q, int r) {
 		k++;
 		j++;
 	}
+    *rp = 4;
 }
 
-void gpu_merge(int p, int q, int r) {
+void gpu_merge(int p, int q, int r, int *rp) {
     int *d_p, *d_r, *d_q, *d_arr;
     cout<<"Executing merge on GPU"<<endl;
     cudaMalloc((void **)&d_p, sizeof(int));
@@ -98,12 +100,13 @@ void gpu_merge(int p, int q, int r) {
     cudaMemcpy( d_arr, arr, N * sizeof(int), cudaMemcpyHostToDevice);
     launch_kernel(__gpu_merge__, d_arr, d_p, d_q, d_r);
     cudaMemcpy(arr, d_arr, N * sizeof(int),cudaMemcpyDeviceToHost);
-    cudaFree(d_p); cudaFree(d_q);cudaFree(d_r); cudaFree(d_arr); 
+    cudaFree(d_p); cudaFree(d_q);cudaFree(d_r); cudaFree(d_arr);
+    *rp = 4; 
 }
 
 void parallel_merge_sort(int p, int r, int *parent_sync_cnt, int *child_sync_cnt, int *rp) {
 	pthread_t tid = pthread_self();
-    //cout<<"parallel merge sort called :"<<p<<" "<<r<<endl;
+    cout<<"parallel merge sort called :"<<p<<" "<<r<<endl;
     if (p < r) {
         int q;
 		q = floor((p+r)/2);
@@ -139,6 +142,7 @@ void parallel_merge_sort(int p, int r, int *parent_sync_cnt, int *child_sync_cnt
 	            pthread_mutex_unlock(&sync_cnt_lock);
                 return;
             }
+            *rp = 2;
 	        pthread_mutex_unlock(&sync_cnt_lock);
         } else {
 	        pthread_mutex_unlock(&sync_cnt_lock);
@@ -146,10 +150,32 @@ void parallel_merge_sort(int p, int r, int *parent_sync_cnt, int *child_sync_cnt
 
         //gpu_merge(p, q, r);
         //cpu_merge(p, q, r);
-        run_task(0, cpu_merge, gpu_merge, p, q, r);
+        pthread_mutex_lock(&sync_cnt_lock);
+        if (*rp == 2) {
+            run_task(1, cpu_merge, gpu_merge, p, q, r, rp);
+            if (*rp == 2) {
+                *rp = 3;
+                submit_task(tid, parallel_merge_sort, p, r, parent_sync_cnt, child_sync_cnt, rp);
+	            pthread_mutex_unlock(&sync_cnt_lock);
+                return;
+            }
+	        pthread_mutex_unlock(&sync_cnt_lock);
+        } else {
+	        pthread_mutex_unlock(&sync_cnt_lock);
+        }
+        
+	    pthread_mutex_lock(&sync_cnt_lock);
+        if (*rp == 3) {
+           submit_task(tid, parallel_merge_sort, p, r, parent_sync_cnt, child_sync_cnt, rp);
+	       pthread_mutex_unlock(&sync_cnt_lock);
+           return;
+        } else {
+	        pthread_mutex_unlock(&sync_cnt_lock);
+        }
+
         pthread_mutex_lock(&sync_cnt_lock);
 		(*parent_sync_cnt)--;
-	    //cout<<"second half completed :"<<r-p<<endl;
+	    cout<<"second half completed :"<<r-p<<endl;
         pthread_mutex_unlock(&sync_cnt_lock);
         if ((r-p) == N-1) {
             completed = true;
@@ -161,7 +187,12 @@ void parallel_merge_sort(int p, int r, int *parent_sync_cnt, int *child_sync_cnt
     }
 }
 int main() {
-	create_threadpool(4);
+    bool ret;	
+    ret = create_threadpool(4);
+    if (!ret) {
+        cout<<"Failed to create threadpool"<<endl;
+        //return -1;
+    }
     for(int i=N-1;i>=0;i--) {
 	    arr[i] = rand()%15;
     }
@@ -173,7 +204,7 @@ int main() {
     int *rp = new int(0);
     int *child_sync_cnt = new int(2);
  
-    submit_task(workers[0], parallel_merge_sort, 0, N-1, parent_sync_cnt, child_sync_cnt, rp);
+    submit_task(cpu_workers[0], parallel_merge_sort, 0, N-1, parent_sync_cnt, child_sync_cnt, rp);
     
     wait_until_done();
     
