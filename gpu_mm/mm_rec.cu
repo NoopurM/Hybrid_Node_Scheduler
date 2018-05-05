@@ -9,7 +9,8 @@
 using namespace std;
 
 pthread_mutex_t sync_cnt_lock;
-extern vector<pthread_t> workers;
+extern vector<pthread_t> cpu_workers;
+extern vector<pthread_t> gpu_workers;
 
 #define N 32
 int m=8;
@@ -38,22 +39,23 @@ void print_matrix(int a[N][N]) {
     }
 }
 
-/*void serial_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N], int r_y, int c_y, int m) {
+void cpu_serial_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N],
+int r_y, int c_y, int z1[N][N], int m) {
     for(int i=r_x, u=r_z; i<r_x+m; i++,u++) {
         for(int k=c_x; k<c_x+m; k++) {
             for(int j=c_y,v=c_z ; j<c_y+m; j++,v++) {
-                z[u][v] = z[u][v] + x[i][k] * y[k][j];
+                z[u][v] = z[u][v] + x[i][k] * y[k][j];           
             }
         }
     }
-}*/
+}
 
-CUDA_KERNEL void serial_mm(int *r_z, int *c_z, int *x, int *r_x, int *c_x, int *y, int *r_y, int *c_y, int *dev_z, int *m) {
+CUDA_KERNEL void __gpu_serial_mm__(int *r_z, int *c_z, int *x, int *r_x, int *c_x, int *y, int *r_y, int *c_y, int *dev_z, int *m) {
 
     for(int i=*r_x, u=*r_z; i<(*r_x+*m); i++,u++) {
         for(int k=*c_x; k<(*c_x+*m); k++) {
-            for(int j=*c_y,v=*c_z ; j<(*c_y+*m); j++,v++) {
-		dev_z[u * N + v] = dev_z[u * N + v] + x[i * N + k] * y[k * N + j]; 
+            for(int j=*c_y,v=*c_z ; j<(*c_y+*m); j++,v++) {	
+                 dev_z[u * N + v] = dev_z[u * N + v] + x[i * N + k] * y[k * N + j]; 
             }
         }
     }
@@ -109,7 +111,7 @@ void gpu_serial_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N],
 	cudaMemcpy( dev_y, h_y, N*N*sizeof(int),cudaMemcpyHostToDevice);
 	cudaMemcpy( dev_z, h_z, N*N*sizeof(int),cudaMemcpyHostToDevice);	
 
-	launch_kernel(serial_mm, dev_r_z, dev_c_z, dev_x, dev_r_x, dev_c_x, dev_y, dev_r_y, dev_c_y, dev_z, dev_m);	
+	launch_kernel(__gpu_serial_mm__, dev_r_z, dev_c_z, dev_x, dev_r_x, dev_c_x, dev_y, dev_r_y, dev_c_y, dev_z, dev_m);	
 
 	cudaMemcpy( h_z, dev_z,N*N*sizeof(int),cudaMemcpyDeviceToHost);
 	output(h_z);
@@ -122,7 +124,8 @@ void parallel_rec_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N
     pthread_t tid = pthread_self();
     if (n == m) {
         //z[r_z][c_z] = z[r_z][c_z] + x[r_x][c_x]*y[r_y][c_y];
-        gpu_serial_mm(r_z, c_z, x, r_x, c_x, y, r_y, c_y, z, m);
+        //gpu_serial_mm(r_z, c_z, x, r_x, c_x, y, r_y, c_y, z, m);
+        run_task(1, cpu_serial_mm, gpu_serial_mm, r_z, c_z, x, r_x, c_x, y, r_y, c_y, z, m);
 	    pthread_mutex_lock(&sync_cnt_lock);
         (*parent_sync_cnt)--;
 	    pthread_mutex_unlock(&sync_cnt_lock);
@@ -221,7 +224,7 @@ int main(int argc, char *argv[]) {
     int *rp = new int(0);
     int *child_sync_cnt = new int(4);
  
-    submit_task(workers[0], parallel_rec_mm, 0, 0, x, 0, 0, y, 0, 0, N, parent_sync_cnt, child_sync_cnt, rp);
+    submit_task(cpu_workers[0], parallel_rec_mm, 0, 0, x, 0, 0, y, 0, 0, N, parent_sync_cnt, child_sync_cnt, rp);
     
     wait_until_done();
     print_matrix(z);
