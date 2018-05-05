@@ -1,13 +1,11 @@
-#include <iostream>
-#include <vector>
-#include <fstream>
-using namespace std;
+#include "bayes.h"
 
 #define TRAINING_FILE "training.data"
 vector<vector<string>> training_data;
 
-vector<string> split(string phrase, string delimiter){
-    vector<string> list;
+//vector<string> split(string phrase, string delimiter){
+void split(string phrase, string delimiter, vector<string>& list){
+    //vector<string> list;
     string s = string(phrase);
     size_t pos = 0;
     string token;
@@ -17,17 +15,19 @@ vector<string> split(string phrase, string delimiter){
         s.erase(0, pos + delimiter.length());
     }
     list.push_back(s);
-    return list;
+    //return list;
 }
 
 void __get_training_data() {
     ifstream file(TRAINING_FILE);
     string line="";
-    
+    vector<string> vec; 
     while (getline(file, line))
     {
-        vector<string> vec;
-        vec = split(line, ",");
+        //vector<string> vec;
+        //vec = split(line, ",");
+        vec.clear();
+        split(line, ",", vec);
         training_data.push_back(vec);
     }
     file.close();
@@ -55,7 +55,10 @@ void get_nc_count(vector<string> training, vector<string> testing, float& type_n
         ratio_nc++;
     }
 }
-void naive_bayes(vector<string> testing_data) {
+int naive_bayes(vector<string> testing_data) {
+    //__get_training_data();
+    //print_training_data(); 
+
     float n_cpu, type_nc_cpu, n_gpu, type_nc_gpu, size_nc_cpu, size_nc_gpu, ratio_nc_cpu, ratio_nc_gpu; 
     float p = 0.5, m =3;
     for (int i=0;i<training_data.size();i++) {
@@ -86,11 +89,21 @@ void naive_bayes(vector<string> testing_data) {
     cpu = 0.5 * p_type_cpu * p_size_cpu * p_ratio_cpu;
     gpu = 0.5 * p_type_gpu * p_size_gpu * p_ratio_gpu;
     cout<<"CPU :"<<cpu<<" GPU :"<<gpu<<endl;
+    if (cpu > gpu) {
+        return 0;
+    }
+    return 1;
 }
-int main() {
+
+void init_bayes() {
+    __get_training_data();
+    print_training_data();    
+}
+
+/*int main() {
     __get_training_data();
     print_training_data();    
      
     vector<string> testing_data = {"merge_sort", "64", "2"};
     naive_bayes(testing_data); 
-}
+}*/

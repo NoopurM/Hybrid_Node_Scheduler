@@ -5,7 +5,7 @@
 #SBATCH --export=ALL
 #SBATCH -t 00:5:00
 #SBATCH --gres=gpu:4
-#SBATCH --mail-user=nmaheshwari@cs.stonybrook.edu
+#SBATCH --mail-user=rrane@cs.stonybrook.edu
 #SBATCH --mail-type=begin  # email me when the job starts
 #SBATCH --mail-type=end    # email me when the job finishes
 ./merge_sort

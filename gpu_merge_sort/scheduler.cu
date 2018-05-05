@@ -2,7 +2,7 @@
 #include <map>
 #include <queue>
 #include <functional>
-#include "scheduler.h"
+//#include "scheduler.h"
 using namespace std;
 
 map<pthread_t, deque<function<void()>>> cpu_que_map;

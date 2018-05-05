@@ -136,7 +136,7 @@ void parallel_merge_sort(int p, int r, int *parent_sync_cnt, int *child_sync_cnt
         local_rp = get_shared_var_value(rp);
         if (local_rp == 2) {
             set_shared_var_value(child_sync_cnt, 1);
-            run_task(0, cpu_merge, gpu_merge, p, q, r, child_sync_cnt);
+            run_task(2, cpu_merge, gpu_merge, p, q, r, child_sync_cnt);
             set_shared_var_value(rp, 3);
             submit_task(tid, parallel_merge_sort, p, r, parent_sync_cnt, child_sync_cnt, rp);
             return;
@@ -166,6 +166,7 @@ void parallel_merge_sort(int p, int r, int *parent_sync_cnt, int *child_sync_cnt
 int main() {
     bool ret;	
     ret = create_threadpool(4);
+    init_bayes();
     if (!ret) {
         cout<<"Failed to create threadpool"<<endl;
         //return -1;
