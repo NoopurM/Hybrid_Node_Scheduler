@@ -40,7 +40,7 @@ void print_matrix(int a[N][N]) {
 }
 
 void cpu_serial_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N],
-int r_y, int c_y, int z1[N][N], int m) {
+int r_y, int c_y, int z1[N][N], int m, int *sync_cnt) {
     for(int i=r_x, u=r_z; i<r_x+m; i++,u++) {
         for(int k=c_x; k<c_x+m; k++) {
             for(int j=c_y,v=c_z ; j<c_y+m; j++,v++) {
@@ -48,6 +48,9 @@ int r_y, int c_y, int z1[N][N], int m) {
             }
         }
     }
+    pthread_mutex_lock(&sync_cnt_lock);
+    (*sync_cnt)--;
+    pthread_mutex_unlock(&sync_cnt_lock);
 }
 
 CUDA_KERNEL void __gpu_serial_mm__(int *r_z, int *c_z, int *x, int *r_x, int *c_x, int *y, int *r_y, int *c_y, int *dev_z, int *m) {
@@ -77,7 +80,8 @@ void output(int *h_a) {
         }
 }
 
-void gpu_serial_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N], int r_y, int c_y, int z[N][N], int m) {
+void gpu_serial_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N],
+int r_y, int c_y, int z[N][N], int m, int *sync_cnt) {
 	int *dev_r_z, *dev_c_z, *dev_r_x, *dev_c_x, *dev_r_y, *dev_c_y, *dev_m;
 	int *dev_x, *dev_y, *dev_z;
 	int *h_x, *h_y, *h_z;
@@ -117,15 +121,39 @@ void gpu_serial_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N],
 	output(h_z);
 	cudaFree(dev_r_z); cudaFree(dev_c_z); cudaFree(dev_r_x); cudaFree(dev_c_x); cudaFree(dev_r_y); cudaFree(dev_c_y);
 	cudaFree(dev_x); cudaFree(dev_y); cudaFree(dev_z); cudaFree(dev_m);
+    pthread_mutex_lock(&sync_cnt_lock);
+    (*sync_cnt)--;
+    pthread_mutex_unlock(&sync_cnt_lock);
 } 
 
 void parallel_rec_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N], int r_y, int c_y, int n, int *parent_sync_cnt, int *child_sync_cnt, int *rp) {
-    //cout<<"parallel_rec called :"<<n<<endl;
+    cout<<"parallel_rec called :"<<n<<endl;
     pthread_t tid = pthread_self();
     if (n == m) {
         //z[r_z][c_z] = z[r_z][c_z] + x[r_x][c_x]*y[r_y][c_y];
         //gpu_serial_mm(r_z, c_z, x, r_x, c_x, y, r_y, c_y, z, m);
-        run_task(1, cpu_serial_mm, gpu_serial_mm, r_z, c_z, x, r_x, c_x, y, r_y, c_y, z, m);
+        pthread_mutex_lock(&sync_cnt_lock);
+        if (*rp != 3) {        
+            *child_sync_cnt = 1;
+            *rp = 3;
+            pthread_mutex_unlock(&sync_cnt_lock);
+            run_task(1, cpu_serial_mm, gpu_serial_mm, r_z, c_z, x, r_x, c_x, y,
+r_y, c_y, z, m, child_sync_cnt);
+             submit_task(tid, parallel_rec_mm, r_z, c_z, x, r_x, c_x, y, r_y, c_y, n, parent_sync_cnt, child_sync_cnt, rp);
+            return;
+        } else {
+            pthread_mutex_unlock(&sync_cnt_lock);
+        }
+        
+        pthread_mutex_lock(&sync_cnt_lock);
+        if (*rp == 3) {
+            if (*child_sync_cnt > 0) {
+                pthread_mutex_unlock(&sync_cnt_lock);
+                submit_task(tid, parallel_rec_mm, r_z, c_z, x, r_x, c_x, y, r_y, c_y, n, parent_sync_cnt, child_sync_cnt, rp);
+                return;        
+            }
+            pthread_mutex_unlock(&sync_cnt_lock);
+        }
 	    pthread_mutex_lock(&sync_cnt_lock);
         (*parent_sync_cnt)--;
 	    pthread_mutex_unlock(&sync_cnt_lock);
@@ -204,7 +232,7 @@ void parallel_rec_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N
             return;
         } else {
             (*parent_sync_cnt)--;
-	        //cout<<"second half completed :"<<n<<endl;
+	        cout<<"second half completed :"<<n<<endl;
             pthread_mutex_unlock(&sync_cnt_lock);
             if (n == N) {
                 completed = true;

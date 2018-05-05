@@ -30,8 +30,8 @@ void run_task(FLAG run_flag, CALLABLE1 fn1, CALLABLE2 fn2, ARGS&& ...args) {
         fn1(args...);
     } else if (run_flag == 1) {
         cout<<"Flag provided 1 hence launching kernel"<<endl;
-        fn2(args...);
-        //gpu_que_map[gpu_workers[0]].push_back(bind(fn2, args...));
+        //fn2(args...);
+        gpu_que_map[gpu_workers[0]].push_back(bind(fn2, args...));
     } else {
         //decide where to execute
         fn1(args...);
