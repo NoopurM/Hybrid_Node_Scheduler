@@ -3,7 +3,7 @@ pthread_mutex_t lock;
 extern vector<pthread_t> cpu_workers;
 extern vector<pthread_t> gpu_workers;
 
-#define N 32
+#define RUN_FLAG 0
 int m=8;
 
 int x[N][N];
@@ -32,6 +32,7 @@ void print_matrix(int a[N][N]) {
 
 void cpu_serial_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N],
 int r_y, int c_y, int z1[N][N], int m, int *sync_cnt) {
+    cout<<"Executing mm on CPU"<<endl;
     for(int i=r_x, u=r_z; i<r_x+m; i++,u++) {
         for(int k=c_x; k<c_x+m; k++) {
             for(int j=c_y,v=c_z ; j<c_y+m; j++,v++) {
@@ -71,7 +72,8 @@ void output(int *h_a) {
 
 void gpu_serial_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N],
 int r_y, int c_y, int z[N][N], int m, int *sync_cnt) {
-	int *dev_r_z, *dev_c_z, *dev_r_x, *dev_c_x, *dev_r_y, *dev_c_y, *dev_m;
+    cout<<"Executing mm on GPU"<<endl;
+    int *dev_r_z, *dev_c_z, *dev_r_x, *dev_c_x, *dev_r_y, *dev_c_y, *dev_m;
 	int *dev_x, *dev_y, *dev_z;
 	int *h_x, *h_y, *h_z;
 
@@ -115,16 +117,14 @@ int r_y, int c_y, int z[N][N], int m, int *sync_cnt) {
 
 void parallel_rec_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N], int r_y, int c_y, int n, int *parent_sync_cnt, int *child_sync_cnt, int *rp) {
     int local_rp, local_sync_cnt;
-    cout<<"parallel_rec called :"<<n<<endl;
     pthread_t tid = pthread_self();
     if (n == m) {
 	local_rp = get_shared_var_value(rp);
         if (local_rp != 3) {        
-	    set_shared_var_value(rp, 3);
-	    set_shared_var_value(child_sync_cnt, 1);
-            run_task(0, cpu_serial_mm, gpu_serial_mm, r_z, c_z, x, r_x, c_x, y,
-r_y, c_y, z, m, child_sync_cnt);
-             submit_task(tid, parallel_rec_mm, r_z, c_z, x, r_x, c_x, y, r_y, c_y, n, parent_sync_cnt, child_sync_cnt, rp);
+	        set_shared_var_value(rp, 3);
+	        set_shared_var_value(child_sync_cnt, 1);
+            run_task(RUN_FLAG, cpu_serial_mm, gpu_serial_mm, r_z, c_z, x, r_x, c_x, y, r_y, c_y, z, m, child_sync_cnt);
+            submit_task(tid, parallel_rec_mm, r_z, c_z, x, r_x, c_x, y, r_y, c_y, n, parent_sync_cnt, child_sync_cnt, rp);
             return;
         }
         
@@ -201,7 +201,6 @@ r_y, c_y, z, m, child_sync_cnt);
             return;
         } else {
 	    dec_shared_var_value(parent_sync_cnt);
-	    cout<<"second half completed :"<<n<<endl;
             if (n == N) {
                 completed = true;
             }

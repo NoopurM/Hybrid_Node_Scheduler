@@ -7,6 +7,7 @@ extern void *__do_work_cpu(void *data);
 extern void *__do_work_gpu(void *data);
 extern map<pthread_t, pthread_mutex_t> cpu_lock_map;
 extern map<pthread_t, pthread_mutex_t> gpu_lock_map;
+extern map<pthread_t, cudaStream_t> stream_map;
 vector<pthread_t> cpu_workers;
 vector<pthread_t> gpu_workers;
 
@@ -29,9 +30,10 @@ bool __create_gpu_threadpool(int nworkers) {
     bool ret = true;
     for (int i=0; i<nworkers; i++) {
         if(pthread_create(&gpu_workers[i], NULL, __do_work_gpu, (void *)(i+1))) {
-            cout<<"Failed to create thread for id :"<<i<<endl;
+            //cout<<"Failed to create thread for id :"<<i<<endl;
             ret = false;
         } else {
+            cudaStreamCreate(&stream_map[gpu_workers[i]]);
             pthread_mutex_init(&gpu_lock_map[gpu_workers[i]], NULL);
         }
     }
@@ -47,7 +49,7 @@ bool create_threadpool(int nworkers) {
 
     ret = __create_gpu_threadpool(nworkers);
     if (!ret) {
-        cout<<"Failed to spawn gpu threads"<<endl;
+        //cout<<"Failed to spawn gpu threads"<<endl;
     }
 
     return ret;
@@ -66,6 +68,7 @@ void wait_until_done() {
             cout<<"Failed to join thread for id :"<<i<<endl;
         }
     }
+    cudaDeviceReset();
     cout<<"GPU threads finished"<<endl;
     return;
 }
