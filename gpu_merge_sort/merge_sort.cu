@@ -5,11 +5,17 @@ extern vector<pthread_t> cpu_workers;
 extern vector<pthread_t> gpu_workers;
 
 bool completed=false;
-#define N 15
+/*
+ * For tasks to be running on CPU - 0
+ * for tasks to be running on GPU - 1
+ * for tasks to be running on CPU/GPU - 2
+ */
+#define RUN_FLAG 1
+#define N 16
+
 int arr[N];
 
 __global__ void __gpu_merge__(int *d_arr, int *p, int *q, int *r) {
-	printf("########## %d %d %d", *p, *q, *r);
     int left_n = *q-*p+1;
     int right_n = *r-*q;
 	int *left = new int[left_n];
@@ -47,6 +53,7 @@ __global__ void __gpu_merge__(int *d_arr, int *p, int *q, int *r) {
 }
 
 void cpu_merge(int p, int q, int r, int *sync_cnt) {
+    cout<<"Executing merge on CPU"<<endl;
     int left[q-p+1], right[r-q];
     int i,j,k;
 	for(i=0;i<q-p+1;i++) {
@@ -99,7 +106,6 @@ void gpu_merge(int p, int q, int r, int *sync_cnt) {
 void parallel_merge_sort(int p, int r, int *parent_sync_cnt, int *child_sync_cnt, int *rp) {
 	pthread_t tid = pthread_self();
     int local_sync_cnt, local_rp;
-    //cout<<"parallel merge sort called :"<<p<<" "<<r<<endl;
     if (p < r) {
         int q;
 		q = floor((p+r)/2);
@@ -127,16 +133,13 @@ void parallel_merge_sort(int p, int r, int *parent_sync_cnt, int *child_sync_cnt
                 submit_task(tid, parallel_merge_sort, p, r, parent_sync_cnt, child_sync_cnt, rp);
                 return;
             }
-            cout<<"Setting rp to 2"<<endl;
             set_shared_var_value(rp, 2);
         }
 
-        //gpu_merge(p, q, r);
-        //cpu_merge(p, q, r);
         local_rp = get_shared_var_value(rp);
         if (local_rp == 2) {
             set_shared_var_value(child_sync_cnt, 1);
-            run_task(2, cpu_merge, gpu_merge, p, q, r, child_sync_cnt);
+            run_task(RUN_FLAG, cpu_merge, gpu_merge, p, q, r, child_sync_cnt);
             set_shared_var_value(rp, 3);
             submit_task(tid, parallel_merge_sort, p, r, parent_sync_cnt, child_sync_cnt, rp);
             return;
@@ -152,7 +155,6 @@ void parallel_merge_sort(int p, int r, int *parent_sync_cnt, int *child_sync_cnt
 	    }
 
         dec_shared_var_value(parent_sync_cnt);
-	    cout<<"second half completed :"<<r-p<<endl;
         if ((r-p) == N-1) {
             completed = true;
         }
@@ -164,20 +166,17 @@ void parallel_merge_sort(int p, int r, int *parent_sync_cnt, int *child_sync_cnt
     }
 }
 int main() {
-    bool ret;	
-    ret = create_threadpool(4);
+    create_threadpool(4);
     init_bayes();
-    if (!ret) {
-        cout<<"Failed to create threadpool"<<endl;
-        //return -1;
-    }
     for(int i=N-1;i>=0;i--) {
-	    arr[i] = rand()%15;
+	    arr[i] = rand()%N;
     }
 
+    cout<<"Input array :"<<endl;
     for(int i=0;i<N;i++) {
-        cout<<"arr :"<<arr[i]<<endl;
+        cout<<arr[i]<<" ";
     }
+    cout<<endl;
 	int *parent_sync_cnt = new int(2);
     int *rp = new int(0);
     int *child_sync_cnt = new int(2);
@@ -185,8 +184,10 @@ int main() {
     submit_task(cpu_workers[0], parallel_merge_sort, 0, N-1, parent_sync_cnt, child_sync_cnt, rp);
     
     wait_until_done();
-    
+   
+    cout<<"Sorted array :"<<endl; 
     for (int i=0;i<N;i++) {
 		cout<<arr[i]<<" ";
 	}
+    cout<<endl;
 }

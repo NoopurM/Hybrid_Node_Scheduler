@@ -3,9 +3,7 @@
 #define TRAINING_FILE "training.data"
 vector<vector<string>> training_data;
 
-//vector<string> split(string phrase, string delimiter){
 void split(string phrase, string delimiter, vector<string>& list){
-    //vector<string> list;
     string s = string(phrase);
     size_t pos = 0;
     string token;
@@ -15,7 +13,6 @@ void split(string phrase, string delimiter, vector<string>& list){
         s.erase(0, pos + delimiter.length());
     }
     list.push_back(s);
-    //return list;
 }
 
 void __get_training_data() {
@@ -24,8 +21,6 @@ void __get_training_data() {
     vector<string> vec; 
     while (getline(file, line))
     {
-        //vector<string> vec;
-        //vec = split(line, ",");
         vec.clear();
         split(line, ",", vec);
         training_data.push_back(vec);
@@ -71,10 +66,10 @@ int naive_bayes(vector<string> testing_data) {
         }
     }
     
-    cout<<"n_cpu = "<<n_cpu<<" n_gpu = "<<n_gpu<<endl;
-    cout<<"type_nc_cpu = "<<type_nc_cpu<<" type_nc_gpu = "<<type_nc_gpu<<endl;
-    cout<<"size_nc_cpu = "<<size_nc_cpu<<" size_nc_gpu = "<<size_nc_gpu<<endl;
-    cout<<"ratio_nc_cpu = "<<ratio_nc_cpu<<" ratio_nc_gpu = "<<ratio_nc_gpu<<endl;
+    //cout<<"n_cpu = "<<n_cpu<<" n_gpu = "<<n_gpu<<endl;
+    //cout<<"type_nc_cpu = "<<type_nc_cpu<<" type_nc_gpu = "<<type_nc_gpu<<endl;
+    //cout<<"size_nc_cpu = "<<size_nc_cpu<<" size_nc_gpu = "<<size_nc_gpu<<endl;
+    //cout<<"ratio_nc_cpu = "<<ratio_nc_cpu<<" ratio_nc_gpu = "<<ratio_nc_gpu<<endl;
     float p_type_cpu, p_size_cpu, p_ratio_cpu;
     p_type_cpu = ((type_nc_cpu + m*p)/(n_cpu+m));
     p_size_cpu = ((size_nc_cpu + m*p)/(n_cpu+m));
@@ -97,7 +92,7 @@ int naive_bayes(vector<string> testing_data) {
 
 void init_bayes() {
     __get_training_data();
-    print_training_data();    
+    //print_training_data();    
 }
 
 /*int main() {
