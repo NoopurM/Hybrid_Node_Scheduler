@@ -9,6 +9,7 @@ using namespace std;
 
 extern map<pthread_t, deque<function<void()>>> cpu_que_map;
 extern map<pthread_t, deque<function<void()>>> gpu_que_map;
+extern map<pthread_t, cudaStream_t> stream_map;
 extern vector<pthread_t> gpu_workers;
 
 template < typename PTHREADID, typename CALLABLE, typename... ARGS >
@@ -20,8 +21,10 @@ void submit_task(PTHREADID tid, CALLABLE fn, ARGS&&... args ) {
 
 template <typename F, typename ...Args>
 void launch_kernel(F fun, Args ...args) {
-    fun<<<1,1>>>(args...);
-    cudaDeviceSynchronize();
+    pthread_t tid = pthread_self();
+    fun<<<1,1,0, stream_map[tid]>>>(args...);
+    //cudaDeviceSynchronize();
+    cudaStreamSynchronize(stream_map[tid]);
   //cuda_check_last(typeid(F).name());
 }
 
