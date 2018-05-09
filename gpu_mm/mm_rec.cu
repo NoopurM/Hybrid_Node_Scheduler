@@ -1,14 +1,5 @@
-#include <iostream>
-#include <vector>
-#include <queue>
-#include <functional>
-#include <map>
-#include <chrono>
 #include "mm_rec.h"
-#include "scheduler.h"
-using namespace std;
-
-pthread_mutex_t sync_cnt_lock;
+pthread_mutex_t lock;
 extern vector<pthread_t> cpu_workers;
 extern vector<pthread_t> gpu_workers;
 
@@ -48,9 +39,7 @@ int r_y, int c_y, int z1[N][N], int m, int *sync_cnt) {
             }
         }
     }
-    pthread_mutex_lock(&sync_cnt_lock);
-    (*sync_cnt)--;
-    pthread_mutex_unlock(&sync_cnt_lock);
+    dec_shared_var_value(sync_cnt);
 }
 
 CUDA_KERNEL void __gpu_serial_mm__(int *r_z, int *c_z, int *x, int *r_x, int *c_x, int *y, int *r_y, int *c_y, int *dev_z, int *m) {
@@ -121,46 +110,36 @@ int r_y, int c_y, int z[N][N], int m, int *sync_cnt) {
 	output(h_z);
 	cudaFree(dev_r_z); cudaFree(dev_c_z); cudaFree(dev_r_x); cudaFree(dev_c_x); cudaFree(dev_r_y); cudaFree(dev_c_y);
 	cudaFree(dev_x); cudaFree(dev_y); cudaFree(dev_z); cudaFree(dev_m);
-    pthread_mutex_lock(&sync_cnt_lock);
-    (*sync_cnt)--;
-    pthread_mutex_unlock(&sync_cnt_lock);
+    dec_shared_var_value(sync_cnt);
 } 
 
 void parallel_rec_mm(int r_z, int c_z, int x[N][N], int r_x, int c_x, int y[N][N], int r_y, int c_y, int n, int *parent_sync_cnt, int *child_sync_cnt, int *rp) {
+    int local_rp, local_sync_cnt;
     cout<<"parallel_rec called :"<<n<<endl;
     pthread_t tid = pthread_self();
     if (n == m) {
-        //z[r_z][c_z] = z[r_z][c_z] + x[r_x][c_x]*y[r_y][c_y];
-        //gpu_serial_mm(r_z, c_z, x, r_x, c_x, y, r_y, c_y, z, m);
-        pthread_mutex_lock(&sync_cnt_lock);
-        if (*rp != 3) {        
-            *child_sync_cnt = 1;
-            *rp = 3;
-            pthread_mutex_unlock(&sync_cnt_lock);
-            run_task(1, cpu_serial_mm, gpu_serial_mm, r_z, c_z, x, r_x, c_x, y,
+	local_rp = get_shared_var_value(rp);
+        if (local_rp != 3) {        
+	    set_shared_var_value(rp, 3);
+	    set_shared_var_value(child_sync_cnt, 1);
+            run_task(0, cpu_serial_mm, gpu_serial_mm, r_z, c_z, x, r_x, c_x, y,
 r_y, c_y, z, m, child_sync_cnt);
              submit_task(tid, parallel_rec_mm, r_z, c_z, x, r_x, c_x, y, r_y, c_y, n, parent_sync_cnt, child_sync_cnt, rp);
             return;
-        } else {
-            pthread_mutex_unlock(&sync_cnt_lock);
         }
         
-        pthread_mutex_lock(&sync_cnt_lock);
-        if (*rp == 3) {
-            if (*child_sync_cnt > 0) {
-                pthread_mutex_unlock(&sync_cnt_lock);
+	local_rp = get_shared_var_value(rp);
+        if (local_rp == 3) {
+	    local_sync_cnt = get_shared_var_value(child_sync_cnt);
+            if (local_sync_cnt > 0) {
                 submit_task(tid, parallel_rec_mm, r_z, c_z, x, r_x, c_x, y, r_y, c_y, n, parent_sync_cnt, child_sync_cnt, rp);
                 return;        
             }
-            pthread_mutex_unlock(&sync_cnt_lock);
         }
-	    pthread_mutex_lock(&sync_cnt_lock);
-        (*parent_sync_cnt)--;
-	    pthread_mutex_unlock(&sync_cnt_lock);
+	dec_shared_var_value(parent_sync_cnt);
     } else {
-	    pthread_mutex_lock(&sync_cnt_lock);
-        if (*rp == 0) {
-            pthread_mutex_unlock(&sync_cnt_lock);
+	local_rp = get_shared_var_value(rp);
+        if (local_rp == 0) {
             int *new_child_sync_cnt1 = new int(4);
             int *child_rp1 = new int(0);
             submit_task(tid, parallel_rec_mm, r_z, c_z, x, r_x, c_x, y, r_y, c_y, n/2, child_sync_cnt, new_child_sync_cnt1, child_rp1);
@@ -176,35 +155,27 @@ r_y, c_y, z, m, child_sync_cnt);
             int *child_rp4 = new int(0);
             submit_task(tid, parallel_rec_mm, r_z+n/2, c_z+n/2, x, r_x+n/2, c_x, y, r_y, c_y+n/2, n/2, child_sync_cnt, new_child_sync_cnt4, child_rp4);
             
-	        pthread_mutex_lock(&sync_cnt_lock);
-            if (*(child_sync_cnt) > 0) {
-                *rp = 1;
+	    local_sync_cnt = get_shared_var_value(child_sync_cnt);	
+            if (local_sync_cnt > 0) {
+		set_shared_var_value(rp, 1);	
                 submit_task(tid, parallel_rec_mm, r_z, c_z, x, r_x, c_x, y, r_y, c_y, n, parent_sync_cnt, child_sync_cnt, rp);
-	            pthread_mutex_unlock(&sync_cnt_lock);
                 return;
             }
-	        pthread_mutex_unlock(&sync_cnt_lock);
-        } else {
-            pthread_mutex_unlock(&sync_cnt_lock);
         }
 	    
-        pthread_mutex_lock(&sync_cnt_lock);
-        if (*rp == 1) {
-            if (*(child_sync_cnt) > 0) {
-                *rp = 1;
+	local_rp = get_shared_var_value(rp);
+        if (local_rp == 1) {
+	    local_sync_cnt = get_shared_var_value(child_sync_cnt);	
+            if (local_sync_cnt > 0) {
+		set_shared_var_value(rp, 1);
                 submit_task(tid, parallel_rec_mm, r_z, c_z, x, r_x, c_x, y, r_y, c_y, n, parent_sync_cnt, child_sync_cnt, rp);
-	            pthread_mutex_unlock(&sync_cnt_lock);
                 return;
             }
-	        pthread_mutex_unlock(&sync_cnt_lock);
-        } else {
-	        pthread_mutex_unlock(&sync_cnt_lock);
         }
         
-        pthread_mutex_lock(&sync_cnt_lock);
-        if (*rp != 2) {
-            *child_sync_cnt = 4;
-	        pthread_mutex_unlock(&sync_cnt_lock);
+	local_rp = get_shared_var_value(rp);
+        if (local_rp != 2) {
+	    set_shared_var_value(child_sync_cnt, 4);
             int *new_child_sync_cnt5 = new int(4);
             int *child_rp5 = new int(0);
             submit_task(tid, parallel_rec_mm, r_z, c_z, x, r_x, c_x+n/2, y, r_y+n/2, c_y, n/2, child_sync_cnt, new_child_sync_cnt5, child_rp5);
@@ -220,20 +191,17 @@ r_y, c_y, z, m, child_sync_cnt);
             int *new_child_sync_cnt8 = new int(4);
             int *child_rp8 = new int(0);
             submit_task(tid, parallel_rec_mm, r_z+n/2, c_z+n/2, x, r_x+n/2, c_x+n/2, y, r_y+n/2, c_y+n/2, n/2, child_sync_cnt, new_child_sync_cnt8, child_rp8);
-        } else {
-	        pthread_mutex_unlock(&sync_cnt_lock);
-        }
+        } 
 	    
-        pthread_mutex_lock(&sync_cnt_lock);
-        if (*(child_sync_cnt) > 0) {
+	local_sync_cnt = get_shared_var_value(child_sync_cnt);
+        if (local_sync_cnt > 0) {
             *rp = 2;
+	    set_shared_var_value(rp, 2);		
             submit_task(tid, parallel_rec_mm, r_z, c_z, x, r_x, c_x, y, r_y, c_y, n, parent_sync_cnt, child_sync_cnt, rp);
-	        pthread_mutex_unlock(&sync_cnt_lock);
             return;
         } else {
-            (*parent_sync_cnt)--;
-	        cout<<"second half completed :"<<n<<endl;
-            pthread_mutex_unlock(&sync_cnt_lock);
+	    dec_shared_var_value(parent_sync_cnt);
+	    cout<<"second half completed :"<<n<<endl;
             if (n == N) {
                 completed = true;
             }
@@ -248,7 +216,7 @@ int main(int argc, char *argv[]) {
     print_matrix(y);
     
     create_threadpool(4);
-	int *parent_sync_cnt = new int(1);
+    int *parent_sync_cnt = new int(1);
     int *rp = new int(0);
     int *child_sync_cnt = new int(4);
  
