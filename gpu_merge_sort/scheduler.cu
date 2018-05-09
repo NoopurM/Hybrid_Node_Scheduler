@@ -9,6 +9,7 @@ map<pthread_t, deque<function<void()>>> cpu_que_map;
 map<pthread_t, pthread_mutex_t> cpu_lock_map;
 map<pthread_t, deque<function<void()>>> gpu_que_map;
 map<pthread_t, pthread_mutex_t> gpu_lock_map;
+map<pthread_t, cudaStream_t> stream_map;
 extern bool completed;
 
 pthread_t get_random_cpu() {
