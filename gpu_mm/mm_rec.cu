@@ -4,6 +4,11 @@ pthread_mutex_t lock;
 extern vector<pthread_t> cpu_workers;
 extern vector<pthread_t> gpu_workers;
 
+/*
+ * For tasks to be running on CPU - 0
+ * for tasks to be running on GPU - 1
+ * for tasks to be running on CPU/GPU - 2
+ */
 #define RUN_FLAG 0
 int m=8;
 
