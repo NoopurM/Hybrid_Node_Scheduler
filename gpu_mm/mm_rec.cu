@@ -1,3 +1,4 @@
+#include <chrono>
 #include "mm_rec.h"
 pthread_mutex_t lock;
 extern vector<pthread_t> cpu_workers;
@@ -218,11 +219,18 @@ int main(int argc, char *argv[]) {
     int *parent_sync_cnt = new int(1);
     int *rp = new int(0);
     int *child_sync_cnt = new int(4);
+    chrono::time_point<std::chrono::system_clock> start, end;
+    start = chrono::system_clock::now();
  
     submit_task(cpu_workers[0], parallel_rec_mm, 0, 0, x, 0, 0, y, 0, 0, N, parent_sync_cnt, child_sync_cnt, rp);
     
     wait_until_done();
+    end = chrono::system_clock::now();
+    chrono::duration<double> elapsed_seconds = end - start;
     print_matrix(z);
-    return 0;
+    cout<<"Run flag :"<<RUN_FLAG<<endl;
+    cout<<"N :"<<N<<endl;
+    cout<<"Job time = "<<elapsed_seconds.count()<<"seconds"<<endl;
+ return 0;
 }
 

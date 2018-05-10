@@ -1,3 +1,4 @@
+#include <chrono>
 #include "merge_sort.h"
 
 pthread_mutex_t lock;
@@ -10,7 +11,7 @@ bool completed=false;
  * for tasks to be running on GPU - 1
  * for tasks to be running on CPU/GPU - 2
  */
-#define RUN_FLAG 1
+#define RUN_FLAG 0
 #define N 16
 
 int arr[N];
@@ -180,14 +181,22 @@ int main() {
 	int *parent_sync_cnt = new int(2);
     int *rp = new int(0);
     int *child_sync_cnt = new int(2);
+    
+    chrono::time_point<std::chrono::system_clock> start, end;
+    start = chrono::system_clock::now();
  
     submit_task(cpu_workers[0], parallel_merge_sort, 0, N-1, parent_sync_cnt, child_sync_cnt, rp);
     
     wait_until_done();
-   
+    
+    end = chrono::system_clock::now();
+    chrono::duration<double> elapsed_seconds = end - start;
     cout<<"Sorted array :"<<endl; 
     for (int i=0;i<N;i++) {
 		cout<<arr[i]<<" ";
 	}
     cout<<endl;
+    cout<<"Run flag :"<<RUN_FLAG<<endl;
+    cout<<"N :"<<N<<endl;
+    cout<<"Job time = "<<elapsed_seconds.count()<<"seconds"<<endl;
 }
