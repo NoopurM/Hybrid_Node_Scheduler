@@ -21,8 +21,8 @@ void submit_task(PTHREADID tid, CALLABLE fn, ARGS&&... args ) {
 template <typename F, typename ...Args>
 void launch_kernel(F fun, Args ...args) {
     pthread_t tid = pthread_self();
-    fun<<<1,1,0, stream_map[tid]>>>(args...);
-    cudaStreamSynchronize(stream_map[tid]);
+    fun<<<1,1>>>(args...);
+    cudaDeviceSynchronize();
 }
 
 vector<string> __get_testing_data(int p, int q, int r, int *sync_cnt) {
