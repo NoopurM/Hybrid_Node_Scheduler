@@ -1,3 +1,7 @@
+/*
+ * Noopur Maheshwari : 111464061
+ * Rahul Rane : 111465246
+ */
 #include "bayes.h"
 
 #define TRAINING_FILE "training.data"
