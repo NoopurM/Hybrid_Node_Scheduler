@@ -1,0 +1,176 @@
+"merge_sort" 2 3 "CPU" 
+"merge_sort" 4 3 "CPU" 
+"merge_sort" 8 3 "CPU" 
+"merge_sort" 16 3 "CPU" 
+"merge_sort" 32 3 "CPU" 
+"merge_sort" 64 3 "CPU" 
+"merge_sort" 128 3 "CPU" 
+"merge_sort" 256 3 "CPU" 
+"merge_sort" 512 3 "CPU" 
+"merge_sort" 1024 3 "CPU" 
+"merge_sort" 2048 3 "CPU" 
+"merge_sort" 4096 3 "CPU" 
+"merge_sort" 2 3 "GPU" 
+"merge_sort" 4 3 "GPU" 
+"merge_sort" 8 3 "GPU" 
+"merge_sort" 16 3 "GPU" 
+"merge_sort" 32 3 "GPU" 
+"merge_sort" 64 3 "GPU" 
+"merge_sort" 128 3 "GPU" 
+"merge_sort" 256 3 "GPU" 
+"merge_sort" 512 3 "GPU" 
+"merge_sort" 1024 3 "GPU" 
+"merge_sort" 2048 3 "GPU" 
+"merge_sort" 4096 3 "GPU" 
+arr :8
+arr :4
+arr :5
+arr :7
+arr :2
+arr :1
+arr :9
+arr :12
+arr :1
+arr :10
+arr :8
+arr :10
+arr :12
+arr :1
+arr :13
+Setting rp to 2
+Setting rp to 2
+task size = 1 avail GPU = 6.95992e+07 avail CPU = 2.17115e+09
+n_cpu = 12 n_gpu = 12
+type_nc_cpu = 12 type_nc_gpu = -4.06001e+31
+size_nc_cpu = 1.54549e-41 size_nc_gpu = -9.50327e+19
+ratio_nc_cpu = 1.54549e-41 ratio_nc_gpu = -4.06002e+31
+CPU :0.0045 GPU :-inf
+naive bayes ret = 0
+Setting rp to 2
+task size = 1 avail GPU = 6.95992e+07 avail CPU = 2.17115e+09
+n_cpu = 12 n_gpu = 12
+type_nc_cpu = 12 type_nc_gpu = -4.06003e+31
+size_nc_cpu = 1.54549e-41 size_nc_gpu = -9.50327e+19
+ratio_nc_cpu = 1.54549e-41 ratio_nc_gpu = -4.06004e+31
+CPU :0.0045 GPU :-inf
+naive bayes ret = 0
+Setting rp to 2
+task size = 1 avail GPU = 6.95992e+07 avail CPU = 2.17115e+09
+n_cpu = 12 n_gpu = 12
+type_nc_cpu = 12 type_nc_gpu = -4.06003e+31
+size_nc_cpu = 1.54549e-41 size_nc_gpu = -9.50327e+19
+ratio_nc_cpu = 1.54549e-41 ratio_nc_gpu = -4.06004e+31
+CPU :0.0045 GPU :-inf
+naive bayes ret = 0
+Setting rp to 2
+task size = 1 avail GPU = 6.95992e+07 avail CPU = 2.17115e+09
+n_cpu = 12 n_gpu = 12
+type_nc_cpu = 12 type_nc_gpu = -4.06003e+31
+size_nc_cpu = 1.54549e-41 size_nc_gpu = -9.50327e+19
+ratio_nc_cpu = 1.54549e-41 ratio_nc_gpu = -4.06004e+31
+CPU :0.0045 GPU :-inf
+naive bayes ret = 0
+Setting rp to 2
+task size = 1 avail GPU = 6.95992e+07 avail CPU = 2.17115e+09
+n_cpu = 12 n_gpu = 12
+type_nc_cpu = 12 type_nc_gpu = -4.06003e+31
+size_nc_cpu = 1.54549e-41 size_nc_gpu = -9.50327e+19
+ratio_nc_cpu = 1.54549e-41 ratio_nc_gpu = -4.06004e+31
+CPU :0.0045 GPU :-inf
+naive bayes ret = 0
+Setting rp to 2
+second half completed :1
+second half completed :1
+second half completed :1
+Setting rp to 2
+task size = 1 avail GPU = 6.95992e+07 avail CPU = 2.17115e+09
+n_cpu = 12 n_gpu = 12
+type_nc_cpu = 12 type_nc_gpu = -6.19277e+26
+size_nc_cpu = 1.54549e-41 size_nc_gpu = -6.59271e+19
+ratio_nc_cpu = 1.54549e-41 ratio_nc_gpu = -6.19279e+26
+CPU :0.0045 GPU :-inf
+naive bayes ret = 0
+second half completed :1
+Setting rp to 2
+task size = 1 avail GPU = 6.95992e+07 avail CPU = 2.17115e+09
+n_cpu = 12 n_gpu = 12
+type_nc_cpu = 12 type_nc_gpu = -1.03881e+34
+size_nc_cpu = 1.54549e-41 size_nc_gpu = -4.87545e+29
+ratio_nc_cpu = 1.54549e-41 ratio_nc_gpu = -1.03881e+34
+CPU :0.0045 GPU :-inf
+naive bayes ret = 0
+second half completed :1
+task size = 3 avail GPU = 6.95992e+07 avail CPU = 2.17115e+09
+n_cpu = 12 n_gpu = 12
+type_nc_cpu = 12 type_nc_gpu = -4.06003e+31
+size_nc_cpu = 1.54549e-41 size_nc_gpu = -9.50327e+19
+ratio_nc_cpu = 1.54549e-41 ratio_nc_gpu = -4.06004e+31
+CPU :0.0045 GPU :-inf
+naive bayes ret = 0
+second half completed :1
+second half completed :1
+Setting rp to 2
+task size = 3 avail GPU = 6.95992e+07 avail CPU = 2.17115e+09
+n_cpu = 12 n_gpu = 12
+type_nc_cpu = 12 type_nc_gpu = -9.44792e+21
+size_nc_cpu = 1.54549e-41 size_nc_gpu = -7.65499e+19
+ratio_nc_cpu = 1.54549e-41 ratio_nc_gpu = -9.44795e+21
+CPU :0.0045 GPU :-inf
+naive bayes ret = 0
+second half completed :3
+task size = 3 avail GPU = 6.95992e+07 avail CPU = 2.17115e+09
+n_cpu = 12 n_gpu = 12
+type_nc_cpu = 12 type_nc_gpu = -4.06003e+31
+size_nc_cpu = 1.54549e-41 size_nc_gpu = -9.50327e+19
+ratio_nc_cpu = 1.54549e-41 ratio_nc_gpu = -4.06004e+31
+CPU :0.0045 GPU :-inf
+naive bayes ret = 0
+Setting rp to 2
+task size = 2 avail GPU = 6.95992e+07 avail CPU = 2.17115e+09
+n_cpu = 12 n_gpu = 12
+type_nc_cpu = 12 type_nc_gpu = -4.06003e+31
+size_nc_cpu = 1 size_nc_gpu = -9.50327e+19
+ratio_nc_cpu = 1.54549e-41 ratio_nc_gpu = -4.06004e+31
+CPU :0.0075 GPU :-inf
+naive bayes ret = 0
+second half completed :3
+Setting rp to 2
+task size = 7 avail GPU = 6.95992e+07 avail CPU = 2.17115e+09
+n_cpu = 12 n_gpu = 12
+type_nc_cpu = 12 type_nc_gpu = -4.06003e+31
+size_nc_cpu = 1.54549e-41 size_nc_gpu = -9.50327e+19
+ratio_nc_cpu = 1.54549e-41 ratio_nc_gpu = -4.06004e+31
+CPU :0.0045 GPU :-inf
+naive bayes ret = 0
+second half completed :3
+second half completed :2
+Setting rp to 2
+task size = 6 avail GPU = 6.95992e+07 avail CPU = 2.17115e+09
+n_cpu = 12 n_gpu = 12
+type_nc_cpu = 12 type_nc_gpu = -4.06003e+31
+size_nc_cpu = 1.54549e-41 size_nc_gpu = -9.50327e+19
+ratio_nc_cpu = 1.54549e-41 ratio_nc_gpu = -4.06004e+31
+CPU :0.0045 GPU :-inf
+naive bayes ret = 0
+second half completed :7
+second half completed :6
+Setting rp to 2
+task size = 14 avail GPU = 6.95992e+07 avail CPU = 2.17115e+09
+n_cpu = 12 n_gpu = 12
+type_nc_cpu = 12 type_nc_gpu = -4.05921e+31
+size_nc_cpu = 1.54549e-41 size_nc_gpu = -9.50327e+19
+ratio_nc_cpu = 1.54549e-41 ratio_nc_gpu = -4.05922e+31
+CPU :0.0045 GPU :-inf
+naive bayes ret = 0
+second half completed :14
+GPU:GPU:CPU:GPU:GPU:47372963211008CPU:473736927004164737352068480047373088720640 exited
+47372959008512CPU:47372961109760 exited
+CPU:47373233747712 exited
+ exited47373522786048 exited exited
+ exited
+ exited
+
+
+CPU threads finished
+GPU threads finished
+1 1 1 2 4 5 7 8 8 9 10 10 12 12 13 

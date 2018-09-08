@@ -1,0 +1,47 @@
+Input array :
+6 3 11 2 11 10 13 9 12 10 15 1 3 9 6 7 
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+CPU :0.0045 GPU :0.0045
+Executing merge on GPU
+GPU:CPU:GPU:GPU:GPU:140368403257088140368322492160 exited140368451426048140368188274432140368314099456 exitedCPU: exited
+ exitedCPU:140368476604160 exited
+
+
+CPU:140368468211456 exited
+ exited
+140368459818752 exited
+
+CPU threads finished
+GPU threads finished
+Sorted array :
+1 2 3 3 6 6 7 9 9 10 10 11 11 12 13 15 
+Run flag :2
+N :16
+Job time = 0.0533578seconds
